@@ -1,3 +1,11 @@
+-- Util
+
+local clearAllKeys = function(t)
+  for key, _ in pairs(t) do
+   t[key] = nil
+  end
+end
+
 local getNpcIdFromGUID = function(guidTarget)
   local idString = select(6, strsplit("-", guidTarget))
   return tonumber(idString)
@@ -10,45 +18,52 @@ local logIf = function(predicate, ...)
   end
 end
 
-local logSoggodonEncounterStart = function()
+local logSoggodonEncounterStart = function(guid)
   local tLog = aura_env.timingLog or {}
-  local soggodonTiming = tLog.soggodonTiming or {}
+  local guidLog = tLog[guid] or {}
 
-  if (not soggodonTiming.threatListUpdate) then
-    soggodonTiming.threatListUpdate = GetTime()
+  if (not guidLog.threatListUpdate) then
+    guidLog.threatListUpdate = GetTime()
+    guidLog.npcId = getNpcIdFromGUID(guid)
   end
 
-  tLog.soggodonTiming = soggodonTiming
+  tLog[guid] = guidLog
 end
 
-local logSoggodonBindingsCast = function()
+local logCast = function(guid, spellId)
   local tLog = aura_env.timingLog or {}
-  local soggodonTiming = tLog.soggodonTiming or {}
+  local guidLog = tLog[guid] or {}
+  local casts = guidLog.casts or {}
+  local spellCasts = casts[spellId] or {}
+  local time = GetTime()
 
-  local bindingsOfMiseryCasts = soggodonTiming.bindingsOfMiseryCasts or {}
+  spellCasts[time] = true
 
-  table.insert(bindingsOfMiseryCasts, GetTime())
-
-  soggodonTiming.bindingsOfMiseryCasts = bindingsOfMiseryCasts
-  tLog.soggodonTiming = soggodonTiming
+  casts[spellId] = spellCasts
+  guidLog.casts = casts
+  tLog[guid] = guidLog
 end
 
 local writeSoggodonTimingsToFile = function()
   local tLog = aura_env.timingLog or {}
-  local soggodonTiming = tLog.soggodonTiming or {}
 
-  print("Writing to file.", soggodonTiming)
-  WeakAurasSaved["displays"]["Soggodon Grip"]["SOGGODON_TIMING"] = soggodonTiming
+  print("Writing to file.", tLog)
+  WeakAurasSaved["displays"]["Soggodon Grip"]["SOGGODON_TIMING"] = tLog
 end
+
+-- Assignments
 
 aura_env.pulled = {}
 aura_env.timingLog = {}
 
+aura_env.clearAllKeys = clearAllKeys
 aura_env.getNpcIdFromGUID = getNpcIdFromGUID
 aura_env.logIf = logIf
 aura_env.logSoggodonEncounterStart = logSoggodonEncounterStart
-aura_env.logSoggodonBindingsCast = logSoggodonBindingsCast
+aura_env.logCast = logCast
 aura_env.writeSoggodonTimingsToFile = writeSoggodonTimingsToFile
+
+-- Notes
 
 -- aura_env.soggodonId = 170383 -- Goldenback Drifter for testing
 -- aura_env.bindingsOfMiseryId = 319224 -- Soulwing Monarh for testing
